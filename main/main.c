@@ -49,14 +49,11 @@ void app_main(void)
     initialize_filesystem();
 
     initialize_i2c(); 
-    //vTaskDelay(10 / portTICK_PERIOD_MS);
     i2c_scanner();
-    //vTaskDelay(10 / portTICK_PERIOD_MS);    
     lcd_init();
 
     initialize_rfrx();
     initialize_tx_namespace();
-
 
     xTaskCreate(&console_task, "console_task", 4096, NULL, 5, NULL);
     xTaskCreate(&rf_rx_task, "rf_rx_task", 8192, NULL, 5, NULL);

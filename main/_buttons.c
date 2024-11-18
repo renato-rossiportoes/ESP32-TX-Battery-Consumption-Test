@@ -41,7 +41,6 @@ static void debounce_timer_callback(TimerHandle_t xTimer) {
     // Verifica o estado do botão e envia o evento se ele ainda estiver pressionado
     if (gpio_get_level(button->gpio_num) == 0) {  // Assumindo que 0 indica pressionado
         xQueueSend(button_event_queue, &button->event, portMAX_DELAY);
-        //ESP_LOGI(TAG, "Button %d pressed", button->gpio_num);
     }
 }
 
@@ -74,6 +73,11 @@ void buttons_init(QueueHandle_t event_queue) {
         if (button->gpio_num == BUTTON2_GPIO) // Botão 2
         {
             button->debounce_timer = xTimerCreate("debounce__reset_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_RESET_MS), pdFALSE, button, debounce_timer_callback);
+        }
+
+        if (button->gpio_num == BUTTON3_GPIO) // Botão 3
+        {
+            button->debounce_timer = xTimerCreate("debounce__button3_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
         }
 
         // Registra o handler de interrupção
@@ -138,6 +142,9 @@ void buttons_task()
                 break;
             case BUTTON3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
+                printf ("Register TX number 1\n");
+                button_register_tx(1);
+                printf ("Register TX number 2\n");
                 button_register_tx(2);
                 break;
             default:

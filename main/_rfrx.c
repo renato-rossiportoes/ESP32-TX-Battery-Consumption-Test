@@ -17,13 +17,11 @@
 static const char* TAG = "rfrx";
 
 static QueueHandle_t      log_evt_queue       = NULL;
-//static QueueHandle_t    rf_rx_evt_queue     = NULL;
 static gptimer_handle_t   rf_rx_timer = NULL;
 static char log_msg[50];
 static bool    decoder_66_bit_status  = 0;
 static uint8_t decoder_66_bit_position = 0;
 static uint8_t decoder_66_bit_values[DECODER_BITS] = {0};
-//static uint64_t gpio_num;
 static uint64_t last_edge_time = 0;
 static uint64_t current_time = 0;
 static uint64_t pulse_duration = 0;
@@ -36,11 +34,14 @@ static uint8_t verbose_mode = 0;
 static uint64_t rx_rele1_cycles = 0;
 static uint64_t rx_rele2_cycles = 0;
 static uint8_t rele_on = 0;
-static char llu_to_str[30];
 
 
 void set_rele_onoff(uint8_t value){
     rele_on = value;
+}
+
+uint8_t get_rele_onoff(){
+    return rele_on;
 }
 
 
@@ -50,6 +51,14 @@ void set_rx_rele1_cycles(uint64_t value){
 
 void set_rx_rele2_cycles(uint64_t value){
     rx_rele2_cycles = value;
+}
+
+uint64_t get_rx_rele1_cycles(){
+    return rx_rele1_cycles;
+}
+
+uint64_t get_rx_rele2_cycles(){
+    return rx_rele2_cycles;
 }
 
 
@@ -128,9 +137,6 @@ void tx_match_execute()
             if (strcmp(key, "tx01") == 0)
             {
                 rx_rele1_cycles++;
-                sprintf (llu_to_str, "1: %llu cycles", rx_rele1_cycles); // Converte para string
-                lcd_set_cursor(0, 0);
-                lcd_write_string(llu_to_str); // Imprime no LCD
                 if (rx_rele1_cycles % 10 == 0) set_nvs_rx_rele1_cycles(rx_rele1_cycles); // Só grava de 10 em 10
                 printf(TCOLORB "RELE 1 Cycles completed: %llu\n" TCOLOR_RESET, rx_rele1_cycles);
             }
@@ -139,12 +145,11 @@ void tx_match_execute()
             if (strcmp(key, "tx02") == 0)
             {
                 rx_rele2_cycles++;
-                sprintf (llu_to_str, "2: %llu cycles", rx_rele2_cycles); // Converte para string
-                lcd_set_cursor(0, 1);
-                lcd_write_string(llu_to_str); // Imprime no LCD
                 if (rx_rele2_cycles % 10 == 0) set_nvs_rx_rele2_cycles(rx_rele2_cycles); // Só grava de 10 em 10
                 printf(TCOLORB "RELE 2 Cycles completed: %llu\n" TCOLOR_RESET, rx_rele2_cycles);
             }
+            lcd_refresh_counter(); // Atualiza os contadores no LCD
+            lcd_refresh_rele_onoff();
         }
     }
     nvs_close(handle);
@@ -439,21 +444,14 @@ static void initialize_nvs_variables_to_ram_rfrx(){
     rx_rele2_cycles = get_nvs_rx_rele2_cycles();
 }
 
-void initialize_rele_cycles_to_lcd(){
-    sprintf (llu_to_str, "1: %llu cycles", rx_rele1_cycles); // Converte para string
-    lcd_set_cursor(0, 0);
-    lcd_write_string(llu_to_str); // Imprime no LCD
-    sprintf (llu_to_str, "2: %llu cycles", rx_rele2_cycles); // Converte para string
-    lcd_set_cursor(0, 1);
-    lcd_write_string(llu_to_str); // Imprime no LCD
-}
 
 void initialize_rfrx(){
     initialize_rf_rx_timer(); 
     initialize_rf_rx_pin();
     create_rfrx_queues();
     initialize_nvs_variables_to_ram_rfrx();
-    initialize_rele_cycles_to_lcd();
+    lcd_refresh_counter();
+    lcd_refresh_rele_onoff();
 }
 
 
@@ -477,7 +475,9 @@ void rele_task(){
             gpio_set_level(RELE1_PIN, 0);
 
             vTaskDelay(RELE_INTERVAL_MS / portTICK_PERIOD_MS);
-
+        }
+        if (rele_on)
+        {
             gpio_set_level(RELE2_PIN, 1);
             vTaskDelay(RELE_DURATION_MS / portTICK_PERIOD_MS);
             gpio_set_level(RELE2_PIN, 0);

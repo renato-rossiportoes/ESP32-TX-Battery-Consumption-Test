@@ -20,6 +20,7 @@
 #include "_console.h"
 #include "_rfrx.h"
 #include "_lcd_i2c.h"
+#include "_buttons.h"
 #include "__config.h"
 
 
@@ -48,19 +49,19 @@ void app_main(void)
     initialize_filesystem();
 
     initialize_i2c(); 
-    vTaskDelay(10 / portTICK_PERIOD_MS);
+    //vTaskDelay(10 / portTICK_PERIOD_MS);
     i2c_scanner();
-    vTaskDelay(10 / portTICK_PERIOD_MS);    
+    //vTaskDelay(10 / portTICK_PERIOD_MS);    
     lcd_init();
-    lcd_set_cursor(0, 0);
-    lcd_write_string("LCD ON");
 
     initialize_rfrx();
     initialize_tx_namespace();
 
+
     xTaskCreate(&console_task, "console_task", 4096, NULL, 5, NULL);
     xTaskCreate(&rf_rx_task, "rf_rx_task", 8192, NULL, 5, NULL);
     xTaskCreate(&rele_task, "rele_task", 4096, NULL, 5, NULL);
+    xTaskCreate(&buttons_task, "buttons_task", 4096, NULL, 5, NULL);
 
     ESP_LOGI (TAG, "Creation of tasks done!");      
 

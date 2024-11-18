@@ -13,6 +13,7 @@
 #include "driver/i2c.h"
 #include "driver/i2c_master.h"
 #include "_lcd_i2c.h"
+#include "_rfrx.h"
 
 #define I2C_MASTER_SCL_IO 22        // GPIO number for I2C master clock
 #define I2C_MASTER_SDA_IO 21        // GPIO number for I2C master data
@@ -27,6 +28,8 @@
 #define LCD_CMD 0x00
 #define LCD_DATA 0x40
 #define LCD_BACKLIGHT 0x08
+
+static char llu_to_str[20];
 
 void initialize_i2c()
 {
@@ -74,6 +77,29 @@ void lcd_send_data(uint8_t data) {
     vTaskDelay(pdMS_TO_TICKS(10)); // Delay aumentado para estabilidade
 }
 
+// Configura o cursor no LCD
+void lcd_set_cursor(uint8_t col, uint8_t row) {
+    uint8_t cmd = (row == 0) ? (0x80 + col) : (0xC0 + col);
+    lcd_send_cmd(cmd);
+}
+
+// Escreve uma string no LCD
+void lcd_write_string(const char *str) {
+    while (*str) {
+        lcd_send_data((uint8_t)(*str));
+        str++;
+    }
+}
+
+
+void lcd_clear(){
+    lcd_set_cursor (0,0);
+    lcd_write_string ("                ");
+    lcd_set_cursor (0,1);
+    lcd_write_string ("                ");
+}
+
+
 // Inicializa o LCD
 void lcd_init() {
     vTaskDelay(pdMS_TO_TICKS(100)); // Delay inicial para estabilizar
@@ -94,22 +120,35 @@ void lcd_init() {
     vTaskDelay(pdMS_TO_TICKS(10));
     lcd_send_cmd(0x06); // Incrementa cursor
     lcd_send_cmd(0x0C); // Display on, cursor off
+    vTaskDelay(pdMS_TO_TICKS(5));
+    lcd_clear();
 }
 
-// Configura o cursor no LCD
-void lcd_set_cursor(uint8_t col, uint8_t row) {
-    uint8_t cmd = (row == 0) ? (0x80 + col) : (0xC0 + col);
-    lcd_send_cmd(cmd);
+
+// Vai para a tela do contador e atualiza os valores
+void lcd_refresh_counter(){
+    sprintf (llu_to_str, "1: %llu            ", get_rx_rele1_cycles()); // Converte para string
+    lcd_set_cursor(0, 0);
+    lcd_write_string(llu_to_str);       // Imprime no LCD
+    sprintf (llu_to_str, "2: %llu            ", get_rx_rele2_cycles()); // Converte para string
+    lcd_set_cursor(0, 1);
+    lcd_write_string(llu_to_str);       // Imprime no LCD
 }
 
-// Escreve uma string no LCD
-void lcd_write_string(const char *str) {
-    while (*str) {
-        lcd_send_data((uint8_t)(*str));
-        str++;
+// Atualiza o simbolo de rele on off
+void lcd_refresh_rele_onoff()
+{
+    if (get_rele_onoff())
+    {
+        lcd_set_cursor(14, 1);
+        lcd_write_string(">>");
+    }
+    else if (!get_rele_onoff())
+    {
+        lcd_set_cursor(14, 1);
+        lcd_write_string("||");
     }
 }
-
 
 void i2c_scanner() {
 

@@ -3,11 +3,16 @@
 #define RELE_DURATION_MS        50
 #define RELE_INTERVAL_MS        700
 
-#define LCD_I2C_SDA             GPIO_NUM_12
-#define LCD_I2C_SCL             GPIO_NUM_13
+//#define LCD_I2C_SDA             GPIO_NUM_12
+//#define LCD_I2C_SCL             GPIO_NUM_13
 
-#define GREEN_OK_LED_PIN        GPIO_NUM_14
+#define GREEN_OK_LED_PIN        GPIO_NUM_26
 #define RF_RX_PIN               GPIO_NUM_27   // Pino onde recebe os dados do Receptor RX
+
+// Definições dos pinos dos botões
+#define BUTTON1_GPIO 13
+#define BUTTON2_GPIO 12
+#define BUTTON3_GPIO 14
 
 // Defines para a rotina que recebe os pulsos do RF e decodifica
 #define PREAMBLE_PULSE_MIN_US 300

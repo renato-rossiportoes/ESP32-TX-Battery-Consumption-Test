@@ -16,7 +16,6 @@
 
 static const char *TAG = "BUTTONS";
 
-
 // Estrutura para armazenar as informações dos botões
 typedef struct {
     int gpio_num;
@@ -39,7 +38,7 @@ static void debounce_timer_callback(TimerHandle_t xTimer) {
     button_t *button = (button_t *) pvTimerGetTimerID(xTimer);
 
     // Verifica o estado do botão e envia o evento se ele ainda estiver pressionado
-    if (gpio_get_level(button->gpio_num) == 0) {  // Assumindo que 0 indica pressionado
+    if (gpio_get_level(button->gpio_num) == 0) { 
         xQueueSend(button_event_queue, &button->event, portMAX_DELAY);
     }
 }

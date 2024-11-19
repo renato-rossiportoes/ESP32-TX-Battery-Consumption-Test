@@ -49,7 +49,6 @@ static struct {
 
 
 
-
 void set_commands_valid_tx(){
     commands_valid_tx = 1;
 }

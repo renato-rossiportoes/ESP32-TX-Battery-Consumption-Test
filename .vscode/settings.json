@@ -51,6 +51,9 @@
         "event_groups.h": "c",
         "stdlib.h": "c",
         "i2c.h": "c",
-        "__config.h": "c"
+        "__config.h": "c",
+        "_rfrx.h": "c",
+        "_test.h": "c",
+        "gptimer.h": "c"
     }
 }

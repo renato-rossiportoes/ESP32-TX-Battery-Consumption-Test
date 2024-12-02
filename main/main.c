@@ -18,9 +18,10 @@
 // App .h
 #include "_storage.h"
 #include "_console.h"
-#include "_rfrx.h"
 #include "_lcd_i2c.h"
 #include "_buttons.h"
+#include "_motor.h"
+#include "_test.h"
 #include "__config.h"
 
 
@@ -52,13 +53,18 @@ void app_main(void)
     i2c_scanner();
     lcd_init();
 
-    initialize_rfrx();
-    initialize_tx_namespace();
+    initialize_namespace();
+
+    lcd_refresh_counter();
+    lcd_refresh_test_onoff();
+
+    gpio_install_isr_service(0);
+
+    initialize_motor();
 
     xTaskCreate(&console_task, "console_task", 4096, NULL, 5, NULL);
-    xTaskCreate(&rf_rx_task, "rf_rx_task", 8192, NULL, 5, NULL);
-    xTaskCreate(&rele_task, "rele_task", 4096, NULL, 5, NULL);
-    xTaskCreate(&buttons_task, "buttons_task", 4096, NULL, 5, NULL);
+    xTaskCreate(&buttons_task, "buttons_task", 8000, NULL, 5, NULL);
+    xTaskCreate(&test_task, "test_task", 8000, NULL, 5, NULL);
 
     ESP_LOGI (TAG, "Creation of tasks done!");      
 

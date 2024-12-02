@@ -1,15 +1,36 @@
-#define RELE1_PIN               GPIO_NUM_32
-#define RELE2_PIN               GPIO_NUM_33
-#define RELE_DURATION_MS        50
-#define RELE_INTERVAL_MS        700
+#pragma once
 
-#define GREEN_OK_LED_PIN        GPIO_NUM_26
-#define RF_RX_PIN               GPIO_NUM_27   // Pino onde recebe os dados do Receptor RX
+// Motor de passo
+#define STEP_PIN    GPIO_NUM_16
+#define DIR_PIN     GPIO_NUM_17
 
-// Definições dos pinos dos botões
+// LCD
+#define I2C_MASTER_SCL_IO 22        // GPIO number for I2C master clock
+#define I2C_MASTER_SDA_IO 21        // GPIO number for I2C master data
+
+// Pinos dos botões de configuração
 #define BUTTON1_GPIO 13
 #define BUTTON2_GPIO 12
 #define BUTTON3_GPIO 14
+#define BUTTON4_GPIO 27
+
+// Pinos dos botões a serem testados
+#define TEST_BUTTON_PIN_1 26
+#define TEST_BUTTON_PIN_2 25
+#define TEST_BUTTON_PIN_3 33
+#define TEST_BUTTON_PIN_4 32
+
+
+#define TEST_BUTTON_REST_MS 200
+
+
+
+#define MOTOR_FREQ  100
+#define MOTOR_TEST_PULSES 50    // 400 pulsos é uma volta completa
+
+//  Número de botões a serem testados
+#define NUMBER_OF_TEST_BUTTONS 4
+
 
 // Defines para a rotina que recebe os pulsos do RF e decodifica
 #define PREAMBLE_PULSE_MIN_US 300

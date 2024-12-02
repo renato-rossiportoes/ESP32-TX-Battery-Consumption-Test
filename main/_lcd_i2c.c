@@ -13,10 +13,10 @@
 #include "driver/i2c.h"
 #include "driver/i2c_master.h"
 #include "_lcd_i2c.h"
-#include "_rfrx.h"
+#include "_test.h"
+#include "__config.h"
 
-#define I2C_MASTER_SCL_IO 22        // GPIO number for I2C master clock
-#define I2C_MASTER_SDA_IO 21        // GPIO number for I2C master data
+
 #define I2C_MASTER_NUM I2C_NUM_0    // I2C port number for master dev
 #define I2C_MASTER_FREQ_HZ 100000   // I2C master clock frequency
 
@@ -127,26 +127,38 @@ void lcd_init() {
 
 // Vai para a tela do contador e atualiza os valores
 void lcd_refresh_counter(){
-    sprintf (llu_to_str, "1: %llu            ", get_rx_rele1_cycles()); // Converte para string
+
+    sprintf (llu_to_str, "a%llu            ", get_button_cycles(1)); // Converte para string
     lcd_set_cursor(0, 0);
     lcd_write_string(llu_to_str);       // Imprime no LCD
-    sprintf (llu_to_str, "2: %llu            ", get_rx_rele2_cycles()); // Converte para string
+
+    sprintf (llu_to_str, "b%llu            ", get_button_cycles(2)); // Converte para string
     lcd_set_cursor(0, 1);
+    lcd_write_string(llu_to_str);       // Imprime no LCD
+
+    sprintf (llu_to_str, "c%llu            ", get_button_cycles(3)); // Converte para string
+    lcd_set_cursor(8, 0);
+    lcd_write_string(llu_to_str);       // Imprime no LCD
+
+    sprintf (llu_to_str, "d%llu            ", get_button_cycles(4)); // Converte para string
+    lcd_set_cursor(8, 1);
     lcd_write_string(llu_to_str);       // Imprime no LCD
 }
 
-// Atualiza o simbolo de rele on off
-void lcd_refresh_rele_onoff()
+
+
+// Atualiza o simbolo de teste on/off
+void lcd_refresh_test_onoff()
 {
-    if (get_rele_onoff())
+    if (get_test_onoff())
     {
-        lcd_set_cursor(14, 1);
-        lcd_write_string(">>");
+        lcd_set_cursor(15, 1);
+        lcd_write_string(">");
     }
-    else if (!get_rele_onoff())
+    else if (!get_test_onoff())
     {
-        lcd_set_cursor(14, 1);
-        lcd_write_string("||");
+        lcd_set_cursor(15, 1);
+        lcd_write_string("|");
     }
 }
 

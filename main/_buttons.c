@@ -19,6 +19,8 @@
 
 static const char *TAG = "BUTTONS";
 
+uint8_t motor_first_cycle_flag = 0;
+
 // Estrutura para armazenar as informações dos botões
 typedef struct {
     int gpio_num;
@@ -31,11 +33,23 @@ static button_t buttons[] = {
     {BUTTON1_GPIO, NULL, BUTTON1_PRESSED},
     {BUTTON2_GPIO, NULL, BUTTON2_PRESSED},
     {BUTTON3_GPIO, NULL, BUTTON3_PRESSED},
-    {BUTTON4_GPIO, NULL, BUTTON4_PRESSED}
+    {BUTTON4_GPIO, NULL, BUTTON4_PRESSED},
+    {TEST_BUTTON_PIN_1, NULL, TEST_BUTTON1_PRESSED},
+    {TEST_BUTTON_PIN_2, NULL, TEST_BUTTON2_PRESSED},
+    {TEST_BUTTON_PIN_3, NULL, TEST_BUTTON3_PRESSED},
+    {TEST_BUTTON_PIN_4, NULL, TEST_BUTTON4_PRESSED}    
 };
 
 // Fila de eventos para botões
 static QueueHandle_t button_event_queue;
+
+uint8_t get_motor_first_cycle_flag(){
+    return motor_first_cycle_flag;
+}
+
+void set_motor_first_cycle_flag(uint8_t value){
+    motor_first_cycle_flag = value;
+}
 
 // Função chamada quando o timer de debounce expira
 static void debounce_timer_callback(TimerHandle_t xTimer) {
@@ -55,7 +69,7 @@ static void IRAM_ATTR button_isr_handler(void *arg) {
     xTimerStartFromISR(button->debounce_timer, NULL);
 }
 
-// Inicializa os GPIOs e configura o debounce dos botões
+// Inicializa os GPIOs e configura o debounce dos botões (botões de config e test buttons)
 void buttons_init(QueueHandle_t event_queue) {
     button_event_queue = event_queue;
 
@@ -83,9 +97,29 @@ void buttons_init(QueueHandle_t event_queue) {
             button->debounce_timer = xTimerCreate("debounce__button3_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
         }
 
-        if (button->gpio_num == BUTTON4_GPIO) // Botão 2
+        if (button->gpio_num == BUTTON4_GPIO) // Botão 4
         {
             button->debounce_timer = xTimerCreate("debounce__button4_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_RESET_MS), pdFALSE, button, debounce_timer_callback);
+        }
+        
+        if (button->gpio_num == TEST_BUTTON_PIN_1) // Test Button 1
+        {
+            button->debounce_timer = xTimerCreate("debounce__testbutton1_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
+        }
+
+        if (button->gpio_num == TEST_BUTTON_PIN_2) // Test Button 2
+        {
+            button->debounce_timer = xTimerCreate("debounce__testbutton2_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
+        }
+        
+        if (button->gpio_num == TEST_BUTTON_PIN_3) // Test Button 3
+        {
+            button->debounce_timer = xTimerCreate("debounce__testbutton3_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
+        }
+
+        if (button->gpio_num == TEST_BUTTON_PIN_4) // Test Button 4
+        {
+            button->debounce_timer = xTimerCreate("debounce__testbutton4_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
         }
 
         // Registra o handler de interrupção
@@ -95,7 +129,7 @@ void buttons_init(QueueHandle_t event_queue) {
 
 void buttons_task()
 {
-    QueueHandle_t button_event_queue = xQueueCreate(4, sizeof(button_event_t));
+    QueueHandle_t button_event_queue = xQueueCreate(10, sizeof(button_event_t));
     buttons_init(button_event_queue);
     button_event_t evt;
 
@@ -112,6 +146,7 @@ void buttons_task()
                 if (get_test_onoff())
                 {
                     printf("Teste ON\n");
+                    set_motor_first_cycle_flag(1);
                 }
                 else if (!get_test_onoff())
                 {
@@ -121,24 +156,34 @@ void buttons_task()
                 break;
             case BUTTON2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
-                printf("1 Step CW\n");
-                gpio_set_level(DIR_PIN, 0);
-                gpio_set_level(STEP_PIN, 0);
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-                gpio_set_level(STEP_PIN, 1);
-                vTaskDelay(10 / portTICK_PERIOD_MS);
+                printf("1 Step CCW\n");
+                gpio_set_level(DIR_PIN, 1);
+
+                for (uint8_t r = 0; r < 3; r++)
+                {
+                    gpio_set_level(STEP_PIN, 0);
+                    vTaskDelay(4 / portTICK_PERIOD_MS);
+                    gpio_set_level(STEP_PIN, 1);
+                    vTaskDelay(4 / portTICK_PERIOD_MS);
+                }
+
                 gpio_set_level(STEP_PIN, 0);
                 // set_test_onoff(1);
                 // set_test_onoff(0);
                 break; 
             case BUTTON3_PRESSED:
                 ESP_LOGI(TAG, "Button 3 pressed");
-                printf("1 Step CCW\n");
-                gpio_set_level(DIR_PIN, 1);
-                gpio_set_level(STEP_PIN, 0);
-                vTaskDelay(10 / portTICK_PERIOD_MS);
-                gpio_set_level(STEP_PIN, 1);
-                vTaskDelay(10 / portTICK_PERIOD_MS);
+                printf("1 Step CW\n");
+                gpio_set_level(DIR_PIN, 0);
+
+                for (uint8_t r = 0; r < 3; r++)
+                {
+                    gpio_set_level(STEP_PIN, 0);
+                    vTaskDelay(4 / portTICK_PERIOD_MS);
+                    gpio_set_level(STEP_PIN, 1);
+                    vTaskDelay(4 / portTICK_PERIOD_MS);
+                }
+
                 gpio_set_level(STEP_PIN, 0);
                
                 break;
@@ -152,11 +197,53 @@ void buttons_task()
                 reset_nvs_button_cycles();
                 vTaskDelay(1500 / portTICK_PERIOD_MS);
                 lcd_refresh_counter();
-                lcd_refresh_test_onoff();
-            break;                    
+                //lcd_refresh_test_onoff();
+            break;
+
+            case TEST_BUTTON1_PRESSED:
+            ESP_LOGI(TAG, "* Test Button 1 * pressed - %lu cycles", get_button_cycles(1));
+            increment_button_cycles(1);
+            lcd_refresh_counter();
+            //lcd_refresh_test_onoff();
+            if (get_button_cycles(1) % 100 == 0){
+                set_nvs_button_cycles(1, get_button_cycles(1));
+            }
+            break;
+
+            case TEST_BUTTON2_PRESSED:
+            ESP_LOGI(TAG, "* Test Button 2 * pressed - %lu cycles", get_button_cycles(2));
+            increment_button_cycles(2);
+            lcd_refresh_counter();
+            //lcd_refresh_test_onoff();
+            if (get_button_cycles(2) % 100 == 0){
+                set_nvs_button_cycles(2, get_button_cycles(2));
+            }
+            break;
+
+            case TEST_BUTTON3_PRESSED:
+            ESP_LOGI(TAG, "* Test Button 3 * pressed - %lu cycles", get_button_cycles(3));
+            increment_button_cycles(3);
+            lcd_refresh_counter();
+            //lcd_refresh_test_onoff();
+            if (get_button_cycles(3) % 100 == 0){
+                set_nvs_button_cycles(3, get_button_cycles(3));
+            }
+            break;
+
+            case TEST_BUTTON4_PRESSED:
+            ESP_LOGI(TAG, "* Test Button 4 * pressed - %lu cycles", get_button_cycles(4));
+            increment_button_cycles(4);
+            lcd_refresh_counter();
+            //lcd_refresh_test_onoff();
+            if (get_button_cycles(4) % 100 == 0){
+                set_nvs_button_cycles(4, get_button_cycles(4));
+            }
+            break;
+
             default:
                 break;
-            }
+            }            
         }
+        //vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }

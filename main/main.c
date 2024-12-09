@@ -55,12 +55,16 @@ void app_main(void)
 
     initialize_namespace();
 
-    lcd_refresh_counter();
-    lcd_refresh_test_onoff();
-
     gpio_install_isr_service(0);
 
     initialize_motor();
+
+    button_cycles_nvs_to_ram();
+
+    lcd_refresh_counter();
+    lcd_refresh_test_onoff();
+
+    vTaskDelay(100 / portTICK_PERIOD_MS);
 
     xTaskCreate(&console_task, "console_task", 4096, NULL, 5, NULL);
     xTaskCreate(&buttons_task, "buttons_task", 8000, NULL, 5, NULL);

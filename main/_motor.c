@@ -33,41 +33,35 @@ void motor_button_test_cycle(uint8_t direction){
     pulse_count = 0;
     step_state = 0;
     gpio_set_level(STEP_PIN, 0); // Garante estado inicial baixo
-    gptimer_start(timer);
-    while (pulse_count < MOTOR_TEST_PULSES) {
-        vTaskDelay(5 / portTICK_PERIOD_MS); // Evita busy-waiting
-    }
-}
 
-
-
-#if 0
-void motor_button_test_cycle(){
-    gpio_set_level(DIR_PIN, 1);  // Pulsos voltando
-    vTaskDelay(5 / portTICK_PERIOD_MS);
-    for (uint8_t u = 0; u < MOTOR_TEST_PULSES; u++)
+    if (direction == 1)
     {
-        gpio_set_level(STEP_PIN, 0);
-        vTaskDelay(5 / portTICK_PERIOD_MS);
-        gpio_set_level(STEP_PIN, 1);
-        vTaskDelay(5 / portTICK_PERIOD_MS);
+        gptimer_start(timer);
+        while (pulse_count < (MOTOR_TEST_PULSES))
+        {
+            vTaskDelay(10 / portTICK_PERIOD_MS); // Evita busy-waiting
+        }
+        // Anda um pouco mais pra baixo
+        vTaskDelay(50 / portTICK_PERIOD_MS);
+        for (uint16_t pulses = 0; pulses < 5; pulses++)
+        {
+            gpio_set_level(STEP_PIN, 1);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
+            gpio_set_level(STEP_PIN, 0);
+            vTaskDelay(5 / portTICK_PERIOD_MS);
+        }
     }
 
-    vTaskDelay(100 / portTICK_PERIOD_MS);
-
-    gpio_set_level(DIR_PIN, 0); // Pulsos indo
-    vTaskDelay(5 / portTICK_PERIOD_MS);
-    for (uint8_t u = 0; u < MOTOR_TEST_PULSES; u++)
-    { 
-        gpio_set_level(STEP_PIN, 0);
-        vTaskDelay(5 / portTICK_PERIOD_MS);
-        gpio_set_level(STEP_PIN, 1);
-        vTaskDelay(5 / portTICK_PERIOD_MS);
+    if (direction == 0)
+    {
+        gptimer_start(timer);
+        while (pulse_count < MOTOR_TEST_PULSES )
+        {
+            vTaskDelay(10 / portTICK_PERIOD_MS); // Evita busy-waiting
+        }
     }
-
-    vTaskDelay(100 / portTICK_PERIOD_MS);
 }
-#endif
+
 
 static bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm_event_data_t *edata, void *user_ctx) {
     //static bool step_state = false;

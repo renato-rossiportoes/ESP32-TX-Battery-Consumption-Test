@@ -7,12 +7,21 @@
 
 #include "esp_console.h"
 #include "_storage.h"
+#include "_test.h"
 #include "__config.h"
 
 static const char* TAG = "_storage";
 
 nvs_handle_t my_nvs_handle;
 
+
+void button_cycles_nvs_to_ram()
+{
+    for (uint8_t r = 1; r <= NUMBER_OF_TEST_BUTTONS; r++)
+    {
+        set_button_cycles(r, get_nvs_button_cycles(r));
+    }
+}
 
 int8_t get_nvs_verb_mode(){
     nvs_handle_t handle;
@@ -35,31 +44,31 @@ void reset_nvs_button_cycles(){
     int err = 0;
     nvs_open("test", NVS_READWRITE, &my_nvs_handle);
     char str_buffer[17];
-    for (uint8_t i=0; i<NUMBER_OF_TEST_BUTTONS; i++){
+    for (uint8_t i=1; i<=NUMBER_OF_TEST_BUTTONS; i++){
         snprintf (str_buffer, 16, "button%d_cycles", i);
-        err = nvs_set_u64(my_nvs_handle, str_buffer, 0);
+        err = nvs_set_u32(my_nvs_handle, str_buffer, 0);
         printf("reset button%d_cycles: %s\n", i, esp_err_to_name(err));
     }
     nvs_close(my_nvs_handle);
 }
 
-void set_nvs_button_cycles(uint8_t button, uint64_t value){
+void set_nvs_button_cycles(uint8_t button, uint32_t value){
     int err = 0;
     nvs_open("test", NVS_READWRITE, &my_nvs_handle);
     char str_buffer[17];
     sprintf (str_buffer, "button%d_cycles", button);
-    err = nvs_set_u64(my_nvs_handle, str_buffer, value);
+    err = nvs_set_u32(my_nvs_handle, str_buffer, value);
     printf("set button%d_cycles: %s\n", button, esp_err_to_name(err));
     nvs_close(my_nvs_handle);
 }
 
-uint64_t get_nvs_button_cycles(uint8_t button){
+uint32_t get_nvs_button_cycles(uint8_t button){
     int err = 0;
-    uint64_t value = 0;
+    uint32_t value = 0;
     nvs_open("test", NVS_READWRITE, &my_nvs_handle);
     char str_buffer[17];
     sprintf (str_buffer, "button%d_cycles", button);
-    err = nvs_get_u64(my_nvs_handle, str_buffer, &value);
+    err = nvs_get_u32(my_nvs_handle, str_buffer, &value);
     printf("get button%d_cycles: %s\n", button, esp_err_to_name(err));
     nvs_close(my_nvs_handle);
     return value;
@@ -130,7 +139,7 @@ static uint8_t check_i8_key_exists(const char *namespace, const char *key)
 
 
 
-static uint8_t check_u64_key_exists(const char *namespace, const char *key)
+static uint8_t check_u32_key_exists(const char *namespace, const char *key)
 {
     esp_err_t err = 0;
     //err = nvs_open(namespace, NVS_READONLY, &my_nvs_handle);
@@ -142,12 +151,12 @@ static uint8_t check_u64_key_exists(const char *namespace, const char *key)
         error = 2;
     }
 
-    uint64_t value;
-    err = nvs_get_u64(my_nvs_handle, key, &value);
+    uint32_t value;
+    err = nvs_get_u32(my_nvs_handle, key, &value);
 
     if (err == ESP_OK)
     {
-        printf("Key '%s' exists in the namespace '%s' and its value is: %llu\n", key, namespace, value);
+        printf("Key '%s' exists in the namespace '%s' and its value is: %lu\n", key, namespace, value);
         error = 1;
     }
     else if (err == ESP_ERR_NVS_NOT_FOUND)
@@ -164,37 +173,6 @@ static uint8_t check_u64_key_exists(const char *namespace, const char *key)
     //nvs_close(my_nvs_handle);
     return error;
 }
-
-
-#if 0
-static uint8_t check_key_exists(const char *namespace, const char *key) {
-    esp_err_t err = nvs_open(namespace, NVS_READONLY, &my_nvs_handle);
-    uint8_t error = 0;
-
-    if (err != ESP_OK) {
-        printf("Error opening namespace '%s': %s\n", namespace, esp_err_to_name(err));
-        error = 2;
-    }
-
-    char value[35]; 
-    size_t len = 35;
-    err = nvs_get_str(my_nvs_handle, key, value, &len);
-
-    if (err == ESP_OK) {
-        printf("Key '%s' exists in the namespace '%s' and its value is: %s\n", key, namespace, value);
-        error = 1;
-    } else if (err == ESP_ERR_NVS_NOT_FOUND) {
-        printf("Key '%s' does not exist in the namespace '%s'.\n", key, namespace);
-        error = 0;
-    } else {
-        printf("Error accessing key '%s': %s\n", key, esp_err_to_name(err));
-        error = 2;
-    }
-
-    nvs_close(my_nvs_handle);
-    return error;
-}
-#endif
 
 
 void nvs_partition_search()
@@ -236,13 +214,13 @@ void initialize_namespace(){
     
     // Verifica se existe as chaves button[x]_cycles. Se não tiver, cria com valor = 0
     char str_buffer[17];
-    for (uint8_t i = 0; i < NUMBER_OF_TEST_BUTTONS; i++)
+    for (uint8_t i = 1; i <= NUMBER_OF_TEST_BUTTONS; i++)
     {        
         sprintf(str_buffer, "button%d_cycles", i);
-        if (check_u64_key_exists("test", str_buffer) == 0)
+        if (check_u32_key_exists("test", str_buffer) == 0)
         {
             printf("Creating entry %s - ", str_buffer);
-            err = nvs_set_u64(my_nvs_handle, str_buffer, 0);
+            err = nvs_set_u32(my_nvs_handle, str_buffer, 0);
             printf("%s \n", esp_err_to_name(err));
         }
     }

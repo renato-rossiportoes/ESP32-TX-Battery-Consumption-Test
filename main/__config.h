@@ -21,7 +21,7 @@
 #define TEST_BUTTON_PIN_4 32
 
 
-#define MOTOR_FREQ  1200  
+#define MOTOR_FREQ 2400  
 #define MOTOR_TEST_PULSES 15    // Configurar o driver com [] pulsos para uma volta completa
 #define TEST_BUTTON_REST_MS 70
 

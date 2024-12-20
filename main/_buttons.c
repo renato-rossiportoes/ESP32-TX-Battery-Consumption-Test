@@ -146,11 +146,13 @@ void buttons_task()
                 if (get_test_onoff())
                 {
                     printf("Teste ON\n");
-                    set_motor_first_cycle_flag(1);
+                    motor_start();
+                    //set_motor_first_cycle_flag(1);
                 }
                 else if (!get_test_onoff())
                 {
                     printf("Teste OFF\n");
+                    motor_stop();
                 }
                 lcd_refresh_test_onoff();
                 break;
@@ -197,6 +199,10 @@ void buttons_task()
                 reset_nvs_button_cycles();
                 vTaskDelay(1500 / portTICK_PERIOD_MS);
                 lcd_refresh_counter();
+                lcd_set_cursor(0, 1);
+                lcd_write_string("                ");
+                lcd_set_cursor(0, 0);
+                lcd_write_string("                ");
                 //lcd_refresh_test_onoff();
             break;
 

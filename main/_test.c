@@ -41,16 +41,21 @@ uint8_t get_test_onoff(){
 void test_task (){
     while(1){
         if (get_test_onoff()){
-            if (get_motor_first_cycle_flag() == 1){
+            //if (get_motor_first_cycle_flag() == 1){
                 //set_motor_first_cycle_flag(0);
                 //motor_first_cycle();
-            }
-
+            //}
+            
+            /*
             motor_button_test_cycle(0); // Move a haste para cima
             printf("\n"); // Para dar um espaço entre o log dos clicks dos botões
             vTaskDelay(TEST_BUTTON_REST_MS / portTICK_PERIOD_MS);
             motor_button_test_cycle(1); // Move a haste para baixo
-            vTaskDelay(TEST_BUTTON_REST_MS / portTICK_PERIOD_MS);            
+            vTaskDelay(TEST_BUTTON_REST_MS / portTICK_PERIOD_MS);
+            */
+
+           
+
         }
         vTaskDelay(10 / portTICK_PERIOD_MS);
     }

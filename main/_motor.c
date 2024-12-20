@@ -19,13 +19,13 @@ void motor_timer_stop(){
 }
 
 void motor_start(){
-    gptimer_enable(timer);
+    //gptimer_enable(timer);
     gptimer_start(timer);
 }
 
 void motor_stop(){
     gptimer_stop(timer);
-    gptimer_disable(timer);
+    //gptimer_disable(timer);
 }
 
 void motor_button_test_cycle(uint8_t direction){
@@ -67,7 +67,7 @@ static bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm
     //static bool step_state = false;
     gpio_set_level(STEP_PIN, step_state);
     step_state = !step_state;
-
+/*
     if (step_state == 0) {
         pulse_count++;
     }
@@ -77,7 +77,7 @@ static bool IRAM_ATTR timer_callback(gptimer_handle_t timer, const gptimer_alarm
         gptimer_stop(timer);  // Para o timer
         return true;          // Retorna true para desativar a interrupção
     }
-
+*/
     return true;
 }
 

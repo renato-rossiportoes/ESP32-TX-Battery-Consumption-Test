@@ -29,9 +29,10 @@ void register_console_cmds(void){
     register_wifi();
     register_nvs();
 
+    register_reg();
     register_verb();
-    register_nvs_reset();
-    register_test();
+    register_tx_reset();
+    register_rele();
 }
 
 

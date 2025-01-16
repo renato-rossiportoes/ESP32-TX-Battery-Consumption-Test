@@ -4,22 +4,17 @@
 #include "freertos/timers.h"
 #include "esp_log.h"
 
-#include "driver/gptimer.h"
-
 #include "_buttons.h"
 #include "__config.h"
+#include "_rfrx.h"
 #include "_lcd_i2c.h"
 #include "_storage.h"
-#include "_test.h"
 #include "_commands.h"
-#include "_motor.h"
 
 #define DEBOUNCE_TIME_MS 50  // Tempo de debounce em milissegundos
 #define DEBOUNCE_TIME_RESET_MS 3000 // Tempo de debounce do botão de reset
 
 static const char *TAG = "BUTTONS";
-
-uint8_t motor_first_cycle_flag = 0;
 
 // Estrutura para armazenar as informações dos botões
 typedef struct {
@@ -32,24 +27,11 @@ typedef struct {
 static button_t buttons[] = {
     {BUTTON1_GPIO, NULL, BUTTON1_PRESSED},
     {BUTTON2_GPIO, NULL, BUTTON2_PRESSED},
-    {BUTTON3_GPIO, NULL, BUTTON3_PRESSED},
-    {BUTTON4_GPIO, NULL, BUTTON4_PRESSED},
-    {TEST_BUTTON_PIN_1, NULL, TEST_BUTTON1_PRESSED},
-    {TEST_BUTTON_PIN_2, NULL, TEST_BUTTON2_PRESSED},
-    {TEST_BUTTON_PIN_3, NULL, TEST_BUTTON3_PRESSED},
-    {TEST_BUTTON_PIN_4, NULL, TEST_BUTTON4_PRESSED}    
+    {BUTTON3_GPIO, NULL, BUTTON3_PRESSED}
 };
 
 // Fila de eventos para botões
 static QueueHandle_t button_event_queue;
-
-uint8_t get_motor_first_cycle_flag(){
-    return motor_first_cycle_flag;
-}
-
-void set_motor_first_cycle_flag(uint8_t value){
-    motor_first_cycle_flag = value;
-}
 
 // Função chamada quando o timer de debounce expira
 static void debounce_timer_callback(TimerHandle_t xTimer) {
@@ -69,7 +51,7 @@ static void IRAM_ATTR button_isr_handler(void *arg) {
     xTimerStartFromISR(button->debounce_timer, NULL);
 }
 
-// Inicializa os GPIOs e configura o debounce dos botões (botões de config e test buttons)
+// Inicializa os GPIOs e configura o debounce dos botões
 void buttons_init(QueueHandle_t event_queue) {
     button_event_queue = event_queue;
 
@@ -84,12 +66,12 @@ void buttons_init(QueueHandle_t event_queue) {
         // Criação do timer de debounce
         if (button->gpio_num == BUTTON1_GPIO) // Botão 1
         {
-            button->debounce_timer = xTimerCreate("debounce__button1_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
+            button->debounce_timer = xTimerCreate("debounce__onoff_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
         }
 
         if (button->gpio_num == BUTTON2_GPIO) // Botão 2
         {
-            button->debounce_timer = xTimerCreate("debounce__button2_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
+            button->debounce_timer = xTimerCreate("debounce__reset_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_RESET_MS), pdFALSE, button, debounce_timer_callback);
         }
 
         if (button->gpio_num == BUTTON3_GPIO) // Botão 3
@@ -97,39 +79,76 @@ void buttons_init(QueueHandle_t event_queue) {
             button->debounce_timer = xTimerCreate("debounce__button3_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
         }
 
-        if (button->gpio_num == BUTTON4_GPIO) // Botão 4
-        {
-            button->debounce_timer = xTimerCreate("debounce__button4_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_RESET_MS), pdFALSE, button, debounce_timer_callback);
-        }
-        
-        if (button->gpio_num == TEST_BUTTON_PIN_1) // Test Button 1
-        {
-            button->debounce_timer = xTimerCreate("debounce__testbutton1_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
-        }
-
-        if (button->gpio_num == TEST_BUTTON_PIN_2) // Test Button 2
-        {
-            button->debounce_timer = xTimerCreate("debounce__testbutton2_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
-        }
-        
-        if (button->gpio_num == TEST_BUTTON_PIN_3) // Test Button 3
-        {
-            button->debounce_timer = xTimerCreate("debounce__testbutton3_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
-        }
-
-        if (button->gpio_num == TEST_BUTTON_PIN_4) // Test Button 4
-        {
-            button->debounce_timer = xTimerCreate("debounce__testbutton4_timer", pdMS_TO_TICKS(DEBOUNCE_TIME_MS), pdFALSE, button, debounce_timer_callback);
-        }
-
         // Registra o handler de interrupção
         gpio_isr_handler_add(button->gpio_num, button_isr_handler, button);
     }
 }
 
+
+
+
+/**
+ * Função: button_register_tx
+ * Propósito: Aguarda o recebimento de um TX para registrar em um slot
+ * 
+ * Parâmetro:
+ * - uint8_t slot: Identifica o slot onde o TX será registrado.
+ * 
+ * Retorno:
+ * - ESP_OK: Caso o registro do TX seja concluído com sucesso.
+ * - ESP_ERR_TIMEOUT: Caso o tempo limite para receber um TX válido expire.
+ */
+esp_err_t button_register_tx(uint8_t slot) {
+    // Coloca o sistema no modo de registro
+    set_reg_mode(1);
+
+    printf("REGISTER - Waiting %dms for a TX...\n", TX_REG_TIMEOUT_MS);
+
+    // Loop para aguardar por um TX válido, com timeout ajustável
+    for (uint16_t r = 0; r < TX_REG_TIMEOUT_MS / 10; r++) {
+        // Aguarda por 10 ms antes de verificar novamente
+        vTaskDelay(10 / portTICK_PERIOD_MS);
+
+        // Verifica se uma transmissão válida foi recebida
+        if (get_commands_valid_tx()) {
+            // Reseta a flag para impedir que entre de novo neste if
+            reset_commands_valid_tx();
+
+            // Registra as informações do TX no slot especificado
+            register_tx(
+                slot, 
+                slot, 
+                get_last_buttons_pressed(),  // Obtém qual o último botão pressionado
+                get_last_rx_serial()        // Obtém o número serial da última transmissão válida
+            );
+
+            // Tira o sistema do modo de registro de TX
+            set_reg_mode(0);
+
+            // Indica sucesso
+            return ESP_OK;
+        }
+    }
+
+    // Caso o loop termine sem uma transmissão válida, exibe mensagem de timeout
+    printf("Timeout\n");
+
+    // Reseta a flag para impedir que entre de novo no if
+    reset_commands_valid_tx();
+
+    // Tira o sistema do modo de registro de TX
+    set_reg_mode(0);
+
+    // Indica que houve um timeout
+    return ESP_ERR_TIMEOUT;
+}
+
+
+
+
 void buttons_task()
 {
-    QueueHandle_t button_event_queue = xQueueCreate(10, sizeof(button_event_t));
+    QueueHandle_t button_event_queue = xQueueCreate(3, sizeof(button_event_t));
     buttons_init(button_event_queue);
     button_event_t evt;
 
@@ -142,114 +161,33 @@ void buttons_task()
             {
             case BUTTON1_PRESSED:
                 ESP_LOGI(TAG, "Button 1 pressed");
-                set_test_onoff(!get_test_onoff()); // Test on/off'
-                if (get_test_onoff())
-                {
-                    printf("Teste ON\n");
-                    motor_start();
-                    //set_motor_first_cycle_flag(1);
-                }
-                else if (!get_test_onoff())
-                {
-                    printf("Teste OFF\n");
-                    motor_stop();
-                }
-                lcd_refresh_test_onoff();
+                set_rele_onoff(!get_rele_onoff()); // Rele on/off
+                lcd_refresh_rele_onoff();               
                 break;
             case BUTTON2_PRESSED:
                 ESP_LOGI(TAG, "Button 2 pressed");
-                printf("1 Step CCW\n");
-                gpio_set_level(DIR_PIN, 1);
-
-                for (uint8_t r = 0; r < 3; r++)
-                {
-                    gpio_set_level(STEP_PIN, 0);
-                    vTaskDelay(4 / portTICK_PERIOD_MS);
-                    gpio_set_level(STEP_PIN, 1);
-                    vTaskDelay(4 / portTICK_PERIOD_MS);
-                }
-
-                gpio_set_level(STEP_PIN, 0);
-                // set_test_onoff(1);
-                // set_test_onoff(0);
-                break; 
-            case BUTTON3_PRESSED:
-                ESP_LOGI(TAG, "Button 3 pressed");
-                printf("1 Step CW\n");
-                gpio_set_level(DIR_PIN, 0);
-
-                for (uint8_t r = 0; r < 3; r++)
-                {
-                    gpio_set_level(STEP_PIN, 0);
-                    vTaskDelay(4 / portTICK_PERIOD_MS);
-                    gpio_set_level(STEP_PIN, 1);
-                    vTaskDelay(4 / portTICK_PERIOD_MS);
-                }
-
-                gpio_set_level(STEP_PIN, 0);
-               
-                break;
-            case BUTTON4_PRESSED:
-                ESP_LOGI(TAG, "Button 4 pressed");
                 lcd_set_cursor(0, 1);
                 lcd_write_string(" Counter Reset  ");
                 lcd_set_cursor(0, 0);
                 lcd_write_string(" Counter Reset  ");
-                reset_button_cycles();
-                reset_nvs_button_cycles();
+                set_rx_rele1_cycles(0);
+                set_rx_rele2_cycles(0);
+                set_nvs_rx_rele1_cycles(0);
+                set_nvs_rx_rele2_cycles(0);
                 vTaskDelay(1500 / portTICK_PERIOD_MS);
                 lcd_refresh_counter();
-                lcd_set_cursor(0, 1);
-                lcd_write_string("                ");
-                lcd_set_cursor(0, 0);
-                lcd_write_string("                ");
-                //lcd_refresh_test_onoff();
-            break;
-
-            case TEST_BUTTON1_PRESSED:
-            ESP_LOGI(TAG, "* Test Button 1 * pressed - %lu cycles", get_button_cycles(1));
-            increment_button_cycles(1);
-            lcd_refresh_counter();
-            //lcd_refresh_test_onoff();
-            if (get_button_cycles(1) % 100 == 0){
-                set_nvs_button_cycles(1, get_button_cycles(1));
-            }
-            break;
-
-            case TEST_BUTTON2_PRESSED:
-            ESP_LOGI(TAG, "* Test Button 2 * pressed - %lu cycles", get_button_cycles(2));
-            increment_button_cycles(2);
-            lcd_refresh_counter();
-            //lcd_refresh_test_onoff();
-            if (get_button_cycles(2) % 100 == 0){
-                set_nvs_button_cycles(2, get_button_cycles(2));
-            }
-            break;
-
-            case TEST_BUTTON3_PRESSED:
-            ESP_LOGI(TAG, "* Test Button 3 * pressed - %lu cycles", get_button_cycles(3));
-            increment_button_cycles(3);
-            lcd_refresh_counter();
-            //lcd_refresh_test_onoff();
-            if (get_button_cycles(3) % 100 == 0){
-                set_nvs_button_cycles(3, get_button_cycles(3));
-            }
-            break;
-
-            case TEST_BUTTON4_PRESSED:
-            ESP_LOGI(TAG, "* Test Button 4 * pressed - %lu cycles", get_button_cycles(4));
-            increment_button_cycles(4);
-            lcd_refresh_counter();
-            //lcd_refresh_test_onoff();
-            if (get_button_cycles(4) % 100 == 0){
-                set_nvs_button_cycles(4, get_button_cycles(4));
-            }
-            break;
-
+                lcd_refresh_rele_onoff();
+                break;
+            case BUTTON3_PRESSED:
+                ESP_LOGI(TAG, "Button 3 pressed");
+                printf ("Register TX number 1\n");
+                button_register_tx(1);
+                printf ("Register TX number 2\n");
+                button_register_tx(2);
+                break;
             default:
                 break;
-            }            
+            }
         }
-        //vTaskDelay(10 / portTICK_PERIOD_MS);
     }
 }

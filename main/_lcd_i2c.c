@@ -13,12 +13,12 @@
 #include "driver/i2c.h"
 #include "driver/i2c_master.h"
 #include "_lcd_i2c.h"
-#include "_test.h"
-#include "__config.h"
+#include "_rfrx.h"
 
-
+#define I2C_MASTER_SCL_IO 22        // GPIO number for I2C master clock
+#define I2C_MASTER_SDA_IO 21        // GPIO number for I2C master data
 #define I2C_MASTER_NUM I2C_NUM_0    // I2C port number for master dev
-#define I2C_MASTER_FREQ_HZ 500000   // I2C master clock frequency
+#define I2C_MASTER_FREQ_HZ 100000   // I2C master clock frequency
 
 #define LCD_ADDR 0x3F               // I2C address of the LCD
 #define LCD_COLS 16                 // Number of columns in the LCD
@@ -29,7 +29,7 @@
 #define LCD_DATA 0x40
 #define LCD_BACKLIGHT 0x08
 
-static char lu_to_str[40];
+static char llu_to_str[20];
 
 void initialize_i2c()
 {
@@ -52,17 +52,17 @@ void lcd_write_byte(uint8_t val, uint8_t mode) {
     uint8_t data_h = (val & 0xF0) | mode | 0x08; // High nibble com backlight
     uint8_t data_l = ((val << 4) & 0xF0) | mode | 0x08; // Low nibble com backlight
 
-    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_h, 1, pdMS_TO_TICKS(20));
+    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_h, 1, pdMS_TO_TICKS(10));
     data_h |= 0x04; // Enable bit on
-    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_h, 1, pdMS_TO_TICKS(20));
+    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_h, 1, pdMS_TO_TICKS(10));
     data_h &= ~0x04; // Enable bit off
-    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_h, 1, pdMS_TO_TICKS(20));
+    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_h, 1, pdMS_TO_TICKS(10));
 
-    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_l, 1, pdMS_TO_TICKS(20));
+    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_l, 1, pdMS_TO_TICKS(10));
     data_l |= 0x04; // Enable bit on
-    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_l, 1, pdMS_TO_TICKS(20));
+    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_l, 1, pdMS_TO_TICKS(10));
     data_l &= ~0x04; // Enable bit off
-    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_l, 1, pdMS_TO_TICKS(20));
+    i2c_master_write_to_device(I2C_MASTER_NUM, LCD_ADDR, &data_l, 1, pdMS_TO_TICKS(10));
 }
 
 // Função para enviar um comando ao LCD
@@ -74,7 +74,7 @@ void lcd_send_cmd(uint8_t cmd) {
 // Função para enviar dados ao LCD
 void lcd_send_data(uint8_t data) {
     lcd_write_byte(data, 0x01); // Modo dados
-    vTaskDelay(pdMS_TO_TICKS(9)); // Delay aumentado para estabilidade
+    vTaskDelay(pdMS_TO_TICKS(10)); // Delay aumentado para estabilidade
 }
 
 // Configura o cursor no LCD
@@ -106,11 +106,11 @@ void lcd_init() {
 
     // Sequência de inicialização em modo 4-bit
     lcd_send_cmd(0x03);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(5));
     lcd_send_cmd(0x03);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(5));
     lcd_send_cmd(0x03);
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(5));
     lcd_send_cmd(0x02); // Modo 4-bit
 
     // Configuração do display
@@ -120,56 +120,33 @@ void lcd_init() {
     vTaskDelay(pdMS_TO_TICKS(10));
     lcd_send_cmd(0x06); // Incrementa cursor
     lcd_send_cmd(0x0C); // Display on, cursor off
-    vTaskDelay(pdMS_TO_TICKS(10));
+    vTaskDelay(pdMS_TO_TICKS(5));
     lcd_clear();
 }
 
 
 // Vai para a tela do contador e atualiza os valores
 void lcd_refresh_counter(){
-
-    //sprintf (lu_to_str, "a%lu      ", get_button_cycles(1)); // Converte para string
-    sprintf(lu_to_str, "a%lu%*sb%lu", get_button_cycles(1), 8 - 1 - snprintf(NULL, 0, "%lu", get_button_cycles(1)), "", get_button_cycles(2)); // Converte para string
+    sprintf (llu_to_str, "1: %llu            ", get_rx_rele1_cycles()); // Converte para string
     lcd_set_cursor(0, 0);
-    lcd_write_string(lu_to_str);       // Imprime no LCD
-
-    //sprintf (lu_to_str, "b%lu      ", get_button_cycles(2)); // Converte para string
-    //sprintf(lu_to_str, "c%lu%*sd%lu", get_button_cycles(3), 8 - 1 - snprintf(NULL, 0, "%lu", get_button_cycles(3)), "", get_button_cycles(4)); // Converte para string
-    sprintf(lu_to_str, "c%lu%*sd%lu%*s%c", 
-        get_button_cycles(3), 
-        8 - 1 - snprintf(NULL, 0, "%lu", get_button_cycles(3)), // Espaçamento necessário
-        "", 
-        get_button_cycles(4), 
-        15 - 8 - snprintf(NULL, 0, "b%lu", get_button_cycles(4)), // Espaçamento para posição 15
-        "", 
-        get_test_onoff() ? '>' : '|'); // Escolha entre '>' ou '|'
+    lcd_write_string(llu_to_str);       // Imprime no LCD
+    sprintf (llu_to_str, "2: %llu            ", get_rx_rele2_cycles()); // Converte para string
     lcd_set_cursor(0, 1);
-    lcd_write_string(lu_to_str);       // Imprime no LCD
-#if 0
-    sprintf (lu_to_str, "c%lu      ", get_button_cycles(3)); // Converte para string
-    lcd_set_cursor(8, 0);
-    lcd_write_string(lu_to_str);       // Imprime no LCD
-
-    sprintf (lu_to_str, "d%lu      ", get_button_cycles(4)); // Converte para string
-    lcd_set_cursor(8, 1);
-    lcd_write_string(lu_to_str);       // Imprime no LCD
-#endif
+    lcd_write_string(llu_to_str);       // Imprime no LCD
 }
 
-
-
-// Atualiza o simbolo de teste on/off
-void lcd_refresh_test_onoff()
+// Atualiza o simbolo de rele on off
+void lcd_refresh_rele_onoff()
 {
-    if (get_test_onoff())
+    if (get_rele_onoff())
     {
-        lcd_set_cursor(15, 1);
-        lcd_write_string(">");
+        lcd_set_cursor(14, 1);
+        lcd_write_string(">>");
     }
-    else if (!get_test_onoff())
+    else if (!get_rele_onoff())
     {
-        lcd_set_cursor(15, 1);
-        lcd_write_string("|");
+        lcd_set_cursor(14, 1);
+        lcd_write_string("||");
     }
 }
 

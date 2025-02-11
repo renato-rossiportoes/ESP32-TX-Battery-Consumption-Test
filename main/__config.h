@@ -11,6 +11,9 @@
 #define BUTTON2_GPIO 12
 #define BUTTON3_GPIO 14
 
+#define KEELOQ_KEY_HIGH                      0xFADA12FA
+#define KEELOQ_KEY_LOW                       0xDA34F0DA
+
 // Defines para a rotina que recebe os pulsos do RF e decodifica
 #define PREAMBLE_PULSE_MIN_US 300
 #define PREAMBLE_PULSE_MAX_US 500
